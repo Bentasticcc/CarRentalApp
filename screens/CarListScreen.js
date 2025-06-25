@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import toyotaImg from '../images/toyota.png';
 import hondaImg from '../images/honda_civic.jpg';
 import fordImg from '../images/ford_ranger.jpg';
 import suzukiImg from '../images/suzuki.jpg';
+
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,50 @@ const cars = [
 ];
 
 export default function CarListScreen({ navigation }) {
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    const checkSignIn = async () => {
+      const signed = await AsyncStorage.getItem('isSignedIn');
+      setIsSignedIn(signed === 'true');
+    };
+    const unsubscribe = navigation.addListener('focus', checkSignIn);
+    checkSignIn();
+    return unsubscribe;
+  }, [navigation]);
+
+  if (!isSignedIn) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f7fff7' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            color: '#06a566',
+            marginBottom: 24,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            paddingHorizontal: 24,
+          }}>
+            You need to create an account to access this page.
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#06a566',
+              paddingVertical: 14,
+              paddingHorizontal: 32,
+              borderRadius: 8,
+              alignItems: 'center',
+              minWidth: 180,
+            }}
+            onPress={() => navigation.replace('SignUp')}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Go to Registration</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f7f7f7" />

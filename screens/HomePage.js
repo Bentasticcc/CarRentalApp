@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,14 +12,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import carIcon from '../images/car_icon.gif'; // Use a PNG or JPG, not a GIF
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import SignUp from './SignUp';
+import SignIn from './SignIn';
+import carIcon from '../images/car_icon.gif';
 
 const { width } = Dimensions.get('window');
 
-// Uniform green palette
 const COLORS = {
-  gradientStart: '#06a566',
-  gradientEnd: '#43e97b',
+  gradientStart: '#f7fff7',
+  gradientEnd: '#e0ffe7',
   primary: '#262626',
   accent: '#43e97b',
   cardBg: '#ffffff',
@@ -29,14 +31,26 @@ const COLORS = {
 
 export default function HomePage({ navigation }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [showSignUp, setShowSignUp] = React.useState(false);
+  const [showSignIn, setShowSignIn] = React.useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [signedInUser, setSignedInUser] = useState('');
 
-  const handlePress = (screen) => {
-    Animated.sequence([
-      Animated.spring(scaleAnim, { toValue: 1.06, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
-    ]).start(() => {
-      navigation.navigate(screen);
-    });
+  // Always check sign-in state and username on focus and when modals close
+  useEffect(() => {
+    const checkSignIn = async () => {
+      const signed = await AsyncStorage.getItem('isSignedIn');
+      const user = await AsyncStorage.getItem('signedInUser');
+      setIsSignedIn(signed === 'true');
+      setSignedInUser(user || '');
+    };
+    const unsubscribe = navigation.addListener('focus', checkSignIn);
+    checkSignIn();
+    return unsubscribe;
+  }, [navigation, showSignIn, showSignUp]);
+
+  const handleSignInOrRegister = () => {
+    setShowSignIn(true);
   };
 
   return (
@@ -45,68 +59,83 @@ export default function HomePage({ navigation }) {
       style={styles.bg}
     >
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={COLORS.gradientStart}
       />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View style={styles.headerWaveContainer}>
+      <View style={styles.outerContainer}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
             <LinearGradient
               colors={[COLORS.primary, COLORS.accent]}
               style={styles.headerWave}
             />
             <Image source={carIcon} style={styles.carIcon} />
+            <Text style={styles.brand}>Car Rental App</Text>
+            <Text style={styles.subtitle}>
+              Drive your journey with comfort and style.
+            </Text>
           </View>
-          <Text style={styles.brand}>BenGo Rentals</Text>
-          <Text style={styles.subtitle}>
-            Drive your journey with comfort and style.
+
+          <View style={styles.centerContent}>
+            {isSignedIn ? (
+              <Text style={styles.rentText}>
+                Welcome,{' '}
+                <Text style={{ color: COLORS.accent }}>{signedInUser}</Text>!
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.rentText}>Want to rent a car?</Text>
+                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                  <TouchableOpacity
+                    style={styles.signInOrRegisterButton}
+                    onPress={handleSignInOrRegister}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.signInOrRegisterText}>
+                      SIGN IN OR REGISTER
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </>
+            )}
+          </View>
+        </ScrollView>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            © {new Date().getFullYear()} Car Rental App
           </Text>
         </View>
-
-        {/* NAVIGATION CARDS */}
-        <View style={styles.card}>
-          {[
-            {
-              icon: 'car-outline',
-              label: 'Browse Cars',
-              screen: 'Cars',
-            },
-            {
-              icon: 'clipboard-outline',
-              label: 'My Rentals',
-              screen: 'Rentals',
-            },
-            {
-              icon: 'settings-outline',
-              label: 'Settings',
-              screen: 'Settings',
-            }
-          ].map((item, idx) => (
-            <Animated.View key={item.label} style={{ transform: [{ scale: scaleAnim }] }}>
-              <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() => handlePress(item.screen)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name={item.icon} size={22} color={COLORS.primary} />
-                </View>
-                <Text style={styles.menuText}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={20} color={COLORS.accent} />
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
-        </View>
-
-        {/* FOOTER */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>© {new Date().getFullYear()} BenGo Rentals</Text>
-        </View>
-      </ScrollView>
+      </View>
+      {/* SignIn Modal */}
+      {showSignIn && (
+        <SignIn
+          visible={showSignIn}
+          onClose={() => setShowSignIn(false)}
+          onShowSignUp={() => {
+            setShowSignIn(false);
+            setShowSignUp(true);
+          }}
+          onLoginSuccess={(username) => {
+            setSignedInUser(username);
+            setIsSignedIn(true);
+            setShowSignIn(false);
+          }}
+        />
+      )}
+      {/* SignUp Modal */}
+      {showSignUp && (
+        <SignUp
+          visible={showSignUp}
+          onClose={() => setShowSignUp(false)}
+          onShowSignIn={() => {
+            setShowSignUp(false);
+            setShowSignIn(true);
+          }}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -114,41 +143,40 @@ export default function HomePage({ navigation }) {
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  outerContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   scrollContent: {
-    flexGrow: 1,
     alignItems: 'center',
     paddingBottom: 40,
+    paddingTop: 40,
   },
   header: {
     alignItems: 'center',
     width: '100%',
     marginBottom: 20,
-  },
-  headerWaveContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
     position: 'relative',
-    height: 160,
-    marginBottom: 8,
   },
   headerWave: {
     position: 'absolute',
     top: 0,
-    left: 0,
     width: '130%',
-    height: 140,
+    height: 180,
     borderBottomLeftRadius: 100,
     borderBottomRightRadius: 100,
     transform: [{ scaleX: 1.5 }],
     opacity: 0.95,
   },
   carIcon: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    marginTop: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginTop: 100,
+    marginBottom: 12,
     backgroundColor: '#fff',
     borderWidth: 4,
     borderColor: '#fff',
@@ -159,7 +187,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
     zIndex: 2,
-    marginTop: 8,
   },
   subtitle: {
     fontSize: 15,
@@ -169,49 +196,54 @@ const styles = StyleSheet.create({
     marginTop: 4,
     zIndex: 2,
   },
-  card: {
+  centerContent: {
+    width: '90%',
     backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
-    width: width * 0.92,
-    paddingVertical: 20,
+    borderRadius: 18,
+    paddingVertical: 36,
     paddingHorizontal: 18,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    marginBottom: 30,
-  },
-  menuButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.menuBg,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    marginTop: 30,
   },
-  menuIconContainer: {
-    backgroundColor: COLORS.iconBg,
-    borderRadius: 16,
-    padding: 6,
-    marginRight: 14,
-  },
-  menuText: {
-    fontSize: 16,
+  rentText: {
+    fontSize: 22,
+    fontWeight: 'bold',
     color: COLORS.primary,
-    fontWeight: '600',
-    flex: 1,
+    marginBottom: 30,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  footer: {
+  signInOrRegisterButton: {
+    backgroundColor: '#06a566',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
     alignItems: 'center',
     marginTop: 10,
+  },
+  signInOrRegisterText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+    letterSpacing: 1,
+  },
+  footer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 18,
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
   },
   footerText: {
     fontSize: 13,
     color: '#999',
+    letterSpacing: 1,
   },
 });
