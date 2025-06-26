@@ -9,6 +9,7 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,21 +23,19 @@ const { width } = Dimensions.get('window');
 const COLORS = {
   gradientStart: '#f7fff7',
   gradientEnd: '#e0ffe7',
-  primary: '#262626',
-  accent: '#43e97b',
-  cardBg: '#ffffff',
+  primary: '#222',
+  accent: '#06a566',
+  cardBg: '#fff',
   iconBg: '#e6f7f1',
-  menuBg: '#f6fef9',
 };
 
 export default function HomePage({ navigation }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const [showSignUp, setShowSignUp] = React.useState(false);
-  const [showSignIn, setShowSignIn] = React.useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [signedInUser, setSignedInUser] = useState('');
 
-  // Always check sign-in state and username on focus and when modals close
   useEffect(() => {
     const checkSignIn = async () => {
       const signed = await AsyncStorage.getItem('isSignedIn');
@@ -59,7 +58,7 @@ export default function HomePage({ navigation }) {
       style={styles.bg}
     >
       <StatusBar
-        barStyle="dark-content"
+        barStyle={Platform.OS === 'ios' ? 'dark-content' : 'default'}
         backgroundColor={COLORS.gradientStart}
       />
       <View style={styles.outerContainer}>
@@ -72,36 +71,51 @@ export default function HomePage({ navigation }) {
               colors={[COLORS.primary, COLORS.accent]}
               style={styles.headerWave}
             />
-            <Image source={carIcon} style={styles.carIcon} />
+            <View style={styles.iconCircle}>
+              <Image source={carIcon} style={styles.carIcon} />
+            </View>
             <Text style={styles.brand}>Car Rental App</Text>
             <Text style={styles.subtitle}>
               Drive your journey with comfort and style.
             </Text>
           </View>
 
-          <View style={styles.centerContent}>
+          <LinearGradient
+            colors={['#f0fff4', '#e6f7f1']}
+            style={styles.centerContent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
             {isSignedIn ? (
-              <Text style={styles.rentText}>
+              <Text style={styles.welcomeText}>
                 Welcome,{' '}
                 <Text style={{ color: COLORS.accent }}>{signedInUser}</Text>!
               </Text>
             ) : (
-              <>
-                <Text style={styles.rentText}>Want to rent a car?</Text>
-                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                  <TouchableOpacity
-                    style={styles.signInOrRegisterButton}
-                    onPress={handleSignInOrRegister}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.signInOrRegisterText}>
-                      SIGN IN OR REGISTER
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              </>
+              <View style={styles.ctaContainer}>
+                <Ionicons
+                  name="car-sport-outline"
+                  size={38}
+                  color={COLORS.accent}
+                  style={{ marginBottom: 10 }}
+                />
+                <Text style={styles.rentTitle}>Ready for your next ride?</Text>
+                <Text style={styles.rentSubtitle}>
+                  Find the perfect car for your journey. Sign in or register to get
+                  started!
+                </Text>
+                <TouchableOpacity
+                  style={styles.signInOrRegisterButton}
+                  onPress={handleSignInOrRegister}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.signInOrRegisterText}>
+                    SIGN IN OR REGISTER
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
-          </View>
+          </LinearGradient>
         </ScrollView>
         <View style={styles.footer}>
           <Text style={styles.footerText}>
@@ -165,72 +179,119 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     width: '130%',
-    height: 180,
+    height: 160,
     borderBottomLeftRadius: 100,
     borderBottomRightRadius: 100,
     transform: [{ scaleX: 1.5 }],
-    opacity: 0.95,
+    opacity: 0.1,
+    zIndex: 1,
   },
-  carIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginTop: 100,
-    marginBottom: 12,
-    backgroundColor: '#fff',
-    borderWidth: 4,
-    borderColor: '#fff',
-    zIndex: 2,
-  },
-  brand: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: COLORS.primary,
-    zIndex: 2,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#333',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    marginTop: 4,
-    zIndex: 2,
-  },
-  centerContent: {
-    width: '90%',
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
-    paddingVertical: 36,
-    paddingHorizontal: 18,
+  iconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: COLORS.iconBg,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    marginBottom: 12,
+    zIndex: 2,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 2,
-    marginTop: 30,
   },
-  rentText: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  carIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  brand: {
+    fontSize: 28,
+    fontWeight: '700',
     color: COLORS.primary,
-    marginBottom: 30,
+    marginTop: 8,
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'Roboto',
+    zIndex: 2,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#444',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginTop: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'Roboto',
+    zIndex: 2,
+  },
+  centerContent: {
+    width: '92%',
+    borderRadius: 18,
+    paddingVertical: 36,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    marginTop: 30,
+    minHeight: 120,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#d6f5e6',
+    shadowColor: '#06a566',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 3,
+    backgroundColor: 'transparent', // let the gradient show
+  },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'Roboto',
+  },
+  ctaContainer: {
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+  },
+  rentTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 6,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
+  rentSubtitle: {
+    fontSize: 15,
+    color: '#4a4a4a',
+    textAlign: 'center',
+    marginBottom: 18,
+    paddingHorizontal: 8,
+    lineHeight: 22,
+  },
   signInOrRegisterButton: {
-    backgroundColor: '#06a566',
+    backgroundColor: COLORS.accent,
     borderRadius: 8,
     paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingHorizontal: 36,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 4,
+    shadowColor: '#06a566',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   signInOrRegisterText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 17,
     letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'Roboto',
   },
   footer: {
     width: '100%',
@@ -245,5 +306,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
     letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'Roboto',
   },
 });

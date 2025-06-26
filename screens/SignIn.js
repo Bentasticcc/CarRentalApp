@@ -18,9 +18,8 @@ export default function SignIn({ visible = true, onClose, onShowSignUp }) {
       return;
     }
     try {
-      const savedUser = await AsyncStorage.getItem('user');
-      const savedPass = await AsyncStorage.getItem('pass');
-      if (user === savedUser && pass === savedPass) {
+      const users = JSON.parse(await AsyncStorage.getItem('users') || '{}');
+      if (users[user] && users[user].password === pass) {
         await AsyncStorage.setItem('isSignedIn', 'true');
         await AsyncStorage.setItem('signedInUser', user);
         if (onClose) onClose();

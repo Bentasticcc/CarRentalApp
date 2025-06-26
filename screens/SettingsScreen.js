@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SignIn from './SignIn';
 import SignUp from './SignUp';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function SettingsScreen({ navigation }) {
   const [profileVisible, setProfileVisible] = useState(false);
@@ -14,16 +15,17 @@ export default function SettingsScreen({ navigation }) {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
 
-  // Always check both sign-in state and username
-  useEffect(() => {
-    const checkSignIn = async () => {
-      const signed = await AsyncStorage.getItem('isSignedIn');
-      const user = await AsyncStorage.getItem('signedInUser');
-      setIsSignedIn(signed === 'true');
-      setUsername(user || '');
-    };
-    checkSignIn();
-  }, [profileVisible, notificationsVisible, showSignIn, showSignUp]);
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkSignIn = async () => {
+        const signed = await AsyncStorage.getItem('isSignedIn');
+        const user = await AsyncStorage.getItem('signedInUser');
+        setIsSignedIn(signed === 'true');
+        setUsername(user || '');
+      };
+      checkSignIn();
+    }, [])
+  );
 
   useEffect(() => {
     const loadNotifications = async () => {

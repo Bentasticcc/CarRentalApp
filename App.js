@@ -11,6 +11,7 @@ import RentalsScreen from './screens/RentalsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SignIn from './screens/SignIn';
 import SignUp from './screens/SignUp';
+import CarsStack from './CarsStack';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,7 +35,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomePage} />
-      <Tab.Screen name="Cars" component={CarListScreen} />
+      <Tab.Screen name="Cars" component={CarsStack} />
       <Tab.Screen name="Rentals" component={RentalsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

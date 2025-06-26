@@ -24,14 +24,20 @@ export default function SignUp({ visible = true, onClose, onShowSignIn }) {
       return;
     }
     try {
-      await AsyncStorage.setItem('user', user);
-      await AsyncStorage.setItem('pass', pass);
+      // Check if user already exists
+      const users = JSON.parse(await AsyncStorage.getItem('users') || '{}');
+      if (users[user]) {
+        Alert.alert('Error', 'Username already exists.');
+        return;
+      }
+      users[user] = { password: pass };
+      await AsyncStorage.setItem('users', JSON.stringify(users));
       Alert.alert('Success', 'Registration successful!', [
         {
           text: 'OK',
           onPress: () => {
             if (onClose) onClose();
-            if (onShowSignIn) onShowSignIn();
+            if (onShowSignIn) onShowSignIn(); // This will open SignIn modal after registration
           },
         },
       ]);

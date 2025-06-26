@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
 import toyotaImg from '../images/toyota.png';
 import hondaImg from '../images/honda_civic.jpg';
 import fordImg from '../images/ford_ranger.jpg';
 import suzukiImg from '../images/suzuki.jpg';
-
+import SignIn from './SignIn';
+import SignUp from './SignUp';
 
 const { width } = Dimensions.get('window');
 
@@ -16,29 +18,38 @@ const cars = [
     name: 'Toyota Vios',
     price: '₱2,500/day',
     image: toyotaImg,
+    stock: Math.floor(Math.random() * 7) + 4, // 4-10
   },
   {
     id: '2',
     name: 'Honda Civic',
     price: '₱3,200/day',
     image: hondaImg,
+    stock: Math.floor(Math.random() * 7) + 4,
   },
   {
     id: '3',
     name: 'Ford Ranger',
     price: '₱4,500/day',
     image: fordImg,
+    stock: Math.floor(Math.random() * 7) + 4,
   },
   {
     id: '4',
     name: 'Suzuki Ertiga',
     price: '₱2,800/day',
     image: suzukiImg,
+    stock: Math.floor(Math.random() * 7) + 4,
   },
 ];
 
 export default function CarListScreen({ navigation }) {
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [carStocks, setCarStocks] = useState({});
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     const checkSignIn = async () => {
@@ -48,36 +59,61 @@ export default function CarListScreen({ navigation }) {
     const unsubscribe = navigation.addListener('focus', checkSignIn);
     checkSignIn();
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, refreshKey]);
+
+  useEffect(() => {
+    const loadStocks = async () => {
+      const stocks = await AsyncStorage.getItem('carStocks');
+      if (stocks) setCarStocks(JSON.parse(stocks));
+    };
+    if (isFocused && isSignedIn) loadStocks();
+  }, [isFocused, isSignedIn]);
 
   if (!isSignedIn) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#f7fff7' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{
-            fontSize: 20,
-            color: '#06a566',
-            marginBottom: 24,
-            fontWeight: 'bold',
-            textAlign: 'center',
-            paddingHorizontal: 24,
-          }}>
-            You need to create an account to access this page.
-          </Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#06a566',
-              paddingVertical: 14,
-              paddingHorizontal: 32,
-              borderRadius: 8,
-              alignItems: 'center',
-              minWidth: 180,
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f7f7' }}>
+        <Text style={{ fontSize: 18, color: '#222', marginBottom: 20, textAlign: 'center' }}>
+          You need to create an account to access this page.
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#06a566',
+            paddingVertical: 12,
+            paddingHorizontal: 32,
+            borderRadius: 8,
+            marginBottom: 10,
+          }}
+          onPress={() => setShowSignUp(true)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Go To Registration</Text>
+        </TouchableOpacity>
+        {/* SignIn Modal */}
+        {showSignIn && (
+          <SignIn
+            visible={showSignIn}
+            onClose={() => setShowSignIn(false)}
+            onShowSignUp={() => {
+              setShowSignIn(false);
+              setShowSignUp(true);
             }}
-            onPress={() => navigation.replace('SignUp')}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Go to Registration</Text>
-          </TouchableOpacity>
-        </View>
+            onLoginSuccess={() => {
+              setIsSignedIn(true);
+              setShowSignIn(false);
+              setRefreshKey(k => k + 1); // Force refresh!
+            }}
+          />
+        )}
+        {/* SignUp Modal */}
+        {showSignUp && (
+          <SignUp
+            visible={showSignUp}
+            onClose={() => setShowSignUp(false)}
+            onShowSignIn={() => {
+              setShowSignUp(false);
+              setTimeout(() => setShowSignIn(true), 300); // Wait for modal to close before opening SignIn
+            }}
+          />
+        )}
       </View>
     );
   }
@@ -93,23 +129,73 @@ export default function CarListScreen({ navigation }) {
         data={cars}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.imageWrapper}>
-              <Image source={item.image} style={styles.image} resizeMode="cover" />
+        renderItem={({ item }) => {
+          const stock = carStocks[item.id] ?? item.stock;
+          const outOfStock = stock <= 0;
+
+          return (
+            <View style={styles.card}>
+              <View style={styles.imageWrapper}>
+                <Image source={item.image} style={styles.image} resizeMode="cover" />
+              </View>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.price}>{item.price}</Text>
+              {outOfStock ? (
+                <Text style={styles.stockOut}>Out of Stock</Text>
+              ) : (
+                <Text style={styles.stockAvailable}>Available: {stock}</Text>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  outOfStock && { backgroundColor: '#ccc' }
+                ]}
+                onPress={() => {
+                  if (!outOfStock) {
+                    navigation.navigate('CarDetails', { 
+                      car: item, 
+                      onRent: async () => {
+                        const updatedStocks = { ...carStocks, [item.id]: carStocks[item.id] - 1 };
+                        setCarStocks(updatedStocks);
+                        await AsyncStorage.setItem('carStocks', JSON.stringify(updatedStocks));
+                      }
+                    });
+                  }
+                }}
+                disabled={outOfStock}
+              >
+                <Text style={[
+                  styles.buttonText,
+                  outOfStock && { color: '#888' }
+                ]}>
+                  {outOfStock ? 'Out of Stock' : 'View Details'}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.price}>{item.price}</Text>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => navigation.navigate('CarDetails', { car: item })}
-            >
-              <Text style={styles.buttonText}>View Details</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         showsVerticalScrollIndicator={false}
       />
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#d32f2f',
+          paddingVertical: 10,
+          paddingHorizontal: 20,
+          borderRadius: 8,
+          alignSelf: 'center',
+          marginBottom: 10,
+        }}
+        onPress={async () => {
+          await AsyncStorage.removeItem('carStocks'); // Only remove carStocks!
+          // Re-initialize stocks with new random values
+          const initialStocks = {};
+          cars.forEach(car => { initialStocks[car.id] = Math.floor(Math.random() * 7) + 4; });
+          await AsyncStorage.setItem('carStocks', JSON.stringify(initialStocks));
+          setCarStocks(initialStocks);
+        }}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reset Car Stocks</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -153,6 +239,18 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 20, fontWeight: 'bold', marginTop: 4, color: '#222' },
   price: { fontSize: 16, color: '#06a566', marginBottom: 8, marginTop: 2 },
+  stockAvailable: {
+    color: '#06a566',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    fontSize: 15,
+  },
+  stockOut: {
+    color: '#d32f2f',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    fontSize: 15,
+  },
   button: {
     backgroundColor: '#06a566',
     paddingVertical: 10,

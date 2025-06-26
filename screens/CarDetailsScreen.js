@@ -62,6 +62,12 @@ export default function CarDetailsScreen({ route, navigation }) {
     notifications.push(`Your rental for the ${car.name} is now being processed for payment.`);
     await AsyncStorage.setItem(`notifications_${username}`, JSON.stringify(notifications));
 
+    // ↓↓↓ ADD THIS: call onRent to reduce stock ↓↓↓
+    // if (route.params?.onRent) {
+    //   await route.params.onRent();
+    // }
+    // ↑↑↑ END ADDITION ↑↑↑
+
     Alert.alert('Rental Confirmed', `You will pay ₱${getTotal().toLocaleString()} for ${getDays()} day(s).`);
     setModalVisible(false);
     navigation.navigate('MainTabs', { screen: 'Rentals' });
@@ -207,5 +213,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  rentButton: {
+    backgroundColor: '#06a566',
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 20,
+  },
+  rentButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
